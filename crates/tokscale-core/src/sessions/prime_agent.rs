@@ -1158,17 +1158,18 @@ mod tests {
     }
 
     #[test]
-    fn standalone_usage_keeps_cached_accounting_aligned_with_assistant_targets() {
+    fn standalone_usage_with_colliding_ids_keeps_assistant_accounting_aligned() {
         let file = session_file(
             r#"{"type":"session","id":"root"}
 {"type":"usage","id":"background","timestamp":"2026-10-16T12:00:00Z","kind":"cache_warm","provider":"anthropic","model":"claude-sonnet-4-5","usage":{"input":5}}
 {"type":"message","id":"assistant","timestamp":"2026-10-16T12:00:01Z","message":{"role":"assistant","model":"gpt-5","responseId":"assistant-response","usage":{"input":20}}}
+{"type":"usage","id":"assistant","timestamp":"2026-10-16T12:00:02Z","kind":"cache_warm","model":"gpt-5","usage":{"input":5}}
 {"type":"child_usage_attributed","id":"child-attribution","targetId":"assistant","childUsage":{"input":3},"aggregateUsage":{"input":20}}
 {"type":"child_usage_attributed","id":"not-a-completion","targetId":"background","childUsage":{"input":1},"aggregateUsage":{"input":5}}"#,
         );
         let (messages, fresh) = parse_prime_agent_file_with_accounting(file.path());
         let cached = analyze_prime_agent_accounting(file.path(), &messages);
-        assert_eq!(messages.len(), 2);
+        assert_eq!(messages.len(), 3);
         for accounting in [fresh, cached] {
             assert_eq!(accounting.adjustments.len(), 1);
             assert_eq!(

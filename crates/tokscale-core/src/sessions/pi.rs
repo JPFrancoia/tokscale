@@ -240,8 +240,11 @@ pub struct PiSessionEntry {
     pub timestamp: Option<String>,
     pub message: Option<PiMessage>,
     /// Standalone `usage` entries attribute background model calls directly.
+    #[serde(default, deserialize_with = "deserialize_standalone_field")]
     pub usage: Option<PiUsage>,
+    #[serde(default, deserialize_with = "deserialize_standalone_field")]
     pub model: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_standalone_field")]
     pub provider: Option<String>,
     pub name: Option<String>,
     /// Present on `title_change` entries.
@@ -255,6 +258,16 @@ pub struct PiSessionEntry {
     #[serde(flatten)]
     #[allow(dead_code)]
     extra_fields: BTreeMap<String, serde_json::Value>,
+}
+
+// Other record types can use these top-level names for unrelated metadata.
+fn deserialize_standalone_field<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::de::DeserializeOwned,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(serde_json::from_value(value).ok())
 }
 
 impl PiSessionEntry {
@@ -805,7 +818,7 @@ fn parse_pi_format_file_inner(
         };
         let provider = match recorded_provider {
             Some(provider)
-                if !provider.is_empty()
+                if !provider.trim().is_empty()
                     && accepts_replacement_field(provider, options.lossy_line_reader) =>
             {
                 provider.to_string()
@@ -977,6 +990,49 @@ mod tests {
             assert_eq!(messages[1].agent.as_deref(), Some("reviewer"));
             assert_eq!(messages[1].workspace_key.as_deref(), Some("/tmp/project"));
             assert_eq!(messages[2].tokens.total(), 15);
+        }
+    }
+
+    #[test]
+    fn standalone_usage_fields_do_not_reject_unrelated_records() {
+        for field in [
+            r#""usage":"extension metadata""#,
+            r#""usage":{"input":"extension metadata"}"#,
+            r#""model":{"name":"extension metadata"}"#,
+            r#""provider":["extension metadata"]"#,
+        ] {
+            let file = create_test_file(&format!(
+                "{{\"type\":\"session\",\"id\":\"metadata\"}}\n\
+                 {{\"type\":\"session_info\",\"name\":\"subagent-reviewer-abcd1234-1\",{field}}}\n\
+                 {{\"type\":\"message\",\"id\":\"reply\",{field},\"message\":{{\"role\":\"assistant\",\"model\":\"gpt-5\",\"usage\":{{\"input\":10}}}}}}"
+            ));
+            for client in ["pi", "omp", "senpi", "kimchi", "prime-agent"] {
+                let messages = parse_pi_format_file(file.path(), client, "pi");
+                assert_eq!(messages.len(), 1, "{client}: {field}");
+                assert_eq!(messages[0].tokens.input, 10, "{client}: {field}");
+                assert_eq!(
+                    messages[0].agent.as_deref(),
+                    Some("reviewer"),
+                    "{client}: {field}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn standalone_usage_and_assistant_whitespace_providers_use_fallback() {
+        let file = create_test_file(
+            r#"{"type":"session","id":"providers"}
+{"type":"usage","id":"standalone","model":"gpt-5","provider":" \t ","usage":{"input":10}}
+{"type":"message","id":"reply","message":{"role":"assistant","model":"gpt-5","provider":" \t ","usage":{"input":20}}}
+{"type":"usage","id":"explicit","model":"gpt-5","provider":"custom-gateway","usage":{"input":30}}"#,
+        );
+        for client in ["pi", "omp", "senpi", "kimchi", "prime-agent"] {
+            let messages = parse_pi_format_file(file.path(), client, "pi");
+            assert_eq!(messages.len(), 3, "{client}");
+            assert_eq!(messages[0].provider_id, "openai", "{client}");
+            assert_eq!(messages[1].provider_id, "openai", "{client}");
+            assert_eq!(messages[2].provider_id, "custom-gateway", "{client}");
         }
     }
 
