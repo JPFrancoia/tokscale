@@ -1852,7 +1852,7 @@ Hermes는 세션 수준 사용량을 SQLite `sessions` 테이블에 저장합니
 ```json
 {"type":"session","id":"pi_ses_001","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}
 {"type":"message","id":"msg_001","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"assistant","model":"claude-3-5-sonnet","provider":"anthropic","usage":{"input":100,"output":50,"cacheRead":10,"cacheWrite":5,"totalTokens":165}}}
-{"type":"usage","id":"usage_001","timestamp":"2026-01-01T00:00:02.000Z","kind":"cache_warm","provider":"anthropic","model":"claude-sonnet-4-5","usage":{"input":0,"output":0,"cacheRead":100,"cacheWrite":0,"totalTokens":100}}
+{"type":"usage","id":"usage_001","parentId":"msg_001","timestamp":"2026-01-01T00:00:02.000Z","kind":"cache_warm","provider":"anthropic","model":"claude-sonnet-4-5","usage":{"input":0,"output":0,"cacheRead":100,"cacheWrite":0,"totalTokens":100}}
 ```
 
 Tokscale은 `provider`, `model`, `usage` 필드가 있는 네이티브 독립 `usage` 항목을 읽습니다. 모든 `kind` 값을 허용합니다. Pi는 이 레코드를 [UsageEntry](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md#usageentry)로 정의합니다.

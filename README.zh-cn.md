@@ -1852,7 +1852,7 @@ Hermes 将会话级使用量存储在 SQLite `sessions` 表中。Tokscale 导入
 ```json
 {"type":"session","id":"pi_ses_001","timestamp":"2026-01-01T00:00:00.000Z","cwd":"/tmp"}
 {"type":"message","id":"msg_001","timestamp":"2026-01-01T00:00:01.000Z","message":{"role":"assistant","model":"claude-3-5-sonnet","provider":"anthropic","usage":{"input":100,"output":50,"cacheRead":10,"cacheWrite":5,"totalTokens":165}}}
-{"type":"usage","id":"usage_001","timestamp":"2026-01-01T00:00:02.000Z","kind":"cache_warm","provider":"anthropic","model":"claude-sonnet-4-5","usage":{"input":0,"output":0,"cacheRead":100,"cacheWrite":0,"totalTokens":100}}
+{"type":"usage","id":"usage_001","parentId":"msg_001","timestamp":"2026-01-01T00:00:02.000Z","kind":"cache_warm","provider":"anthropic","model":"claude-sonnet-4-5","usage":{"input":0,"output":0,"cacheRead":100,"cacheWrite":0,"totalTokens":100}}
 ```
 
 Tokscale 读取具有 `provider`、`model` 和 `usage` 字段的原生独立 `usage` 条目。它接受任意 `kind` 值。Pi 将该记录定义为 [UsageEntry](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md#usageentry)。
